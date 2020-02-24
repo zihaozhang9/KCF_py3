@@ -78,15 +78,16 @@ if __name__ == '__main__':
 			onTracking = True
 		elif(onTracking):
 			t0 = time()
-			boundingbox = tracker.update(frame)
+			boundingbox,peak_value = tracker.update(frame)
 			t1 = time()
 
-			boundingbox = [int(i) for i in boundingbox]#map(int, boundingbox)
+			boundingbox = [int(i) for i in boundingbox] # map(int, boundingbox)
 			cv2.rectangle(frame,(boundingbox[0],boundingbox[1]), (boundingbox[0]+boundingbox[2],boundingbox[1]+boundingbox[3]), (0,255,255), 1)
 			
 			duration = 0.8*duration + 0.2*(t1-t0)
 			#duration = t1-t0
 			cv2.putText(frame, 'FPS: '+str(1/duration)[:4].strip('.'), (8,20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 2)
+			cv2.putText(frame, 'peak_value:%.2f '%(peak_value), (8,40), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 2)
 
 		cv2.imshow('tracking', frame)
 		c = cv2.waitKey(inteval) & 0xFF
