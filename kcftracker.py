@@ -34,11 +34,13 @@ def rearrange(img):
     #return np.fft.fftshift(img, axes=(0,1))
     assert(img.ndim==2)
     img_ = np.zeros(img.shape, img.dtype)
-    xh, yh = img.shape[1]//2, img.shape[0]//2
-    img_[0:yh,0:xh], img_[yh:img.shape[0],xh:img.shape[1]] = img[yh:img.shape[0],xh:img.shape[1]], img[0:yh,0:xh]
-    img_[0:yh,xh:img.shape[1]], img_[yh:img.shape[0],0:xh] = img[yh:img.shape[0],0:xh], img[0:yh,xh:img.shape[1]]
+    xh, yh = int(img.shape[1]//2), int(img.shape[0]//2)
+    img_[0:yh,0:xh] = img[yh:2*yh,xh:2*xh] #img[yh:img.shape[0],xh:img.shape[1]]
+    img_[yh:2*yh,xh:2*xh]  = img[0:yh,0:xh] #img_[yh:img.shape[0],xh:img.shape[1]]  = img[0:yh,0:xh]
+    
+    img_[0:yh,xh:2*xh]  = img[yh:2*yh,0:xh] #img_[0:yh,xh:img.shape[1]]  = img[yh:img.shape[0],0:xh]
+    img_[yh:2*yh,0:xh] = img[0:yh,xh:2*xh]
     return img_
-
 
 # recttools
 def x2(rect):
@@ -191,7 +193,7 @@ class KCFTracker:
 
             if(self.template_size > 1):
                 if(padded_w >= padded_h):
-                    self._scale = padded_w / float(self.template_size )
+                    self._scale = padded_w / float(self.template_size)
                 else:
                     self._scale = padded_h / float(self.template_size)
                 self._tmpl_sz[0] = int(padded_w / self._scale)
@@ -201,28 +203,27 @@ class KCFTracker:
                 self._tmpl_sz[1] = int(padded_h)
                 self._scale = 1.
 
-            if(self._hogfeatures):
-                self._tmpl_sz[0] = int( int(self._tmpl_sz[0]) / (2*self.cell_size) * 2*self.cell_size + 2*self.cell_size )
-                self._tmpl_sz[1] = int( int(self._tmpl_sz[1]) / (2*self.cell_size) * 2*self.cell_size + 2*self.cell_size )
+            if(self._hogfeatures): # True 
+                self._tmpl_sz[0] = int( int(self._tmpl_sz[0]) / (2*self.cell_size) ) * 2*self.cell_size + 2*self.cell_size #
+                self._tmpl_sz[1] = int( int(self._tmpl_sz[1]) / (2*self.cell_size) ) * 2*self.cell_size + 2*self.cell_size 
             else:
-                self._tmpl_sz[0] = int( int(self._tmpl_sz[0]) / 2 * 2 )
-                self._tmpl_sz[1] = int( int(self._tmpl_sz[1]) / 2 * 2 )
+                self._tmpl_sz[0] = int( int(self._tmpl_sz[0]) / 2 ) * 2 
+                self._tmpl_sz[1] = int( int(self._tmpl_sz[1]) / 2 ) * 2 
         extracted_roi[2] = int(scale_adjust * self._scale * self._tmpl_sz[0])
         extracted_roi[3] = int(scale_adjust * self._scale * self._tmpl_sz[1])
-        extracted_roi[0] = int(cx - extracted_roi[2]/2)
-        extracted_roi[1] = int(cy - extracted_roi[3]/2)
+        extracted_roi[0] = int(cx - int(extracted_roi[2]/2))
+        extracted_roi[1] = int(cy - int(extracted_roi[3]/2))
 
         z = subwindow(image, extracted_roi, cv2.BORDER_REPLICATE)
-        #import pdb;pdb.set_trace()
         if(z.shape[1]!=self._tmpl_sz[0] or z.shape[0]!=self._tmpl_sz[1]):
-            z = cv2.resize(z, tuple(self._tmpl_sz))
+            z = cv2.resize(z, tuple([int(i) for i in self._tmpl_sz]) )
 
         if(self._hogfeatures):
             mapp = {'sizeX':0, 'sizeY':0, 'numFeatures':0, 'map':0}
             mapp = fhog.getFeatureMaps(z, self.cell_size, mapp)
             mapp = fhog.normalizeAndTruncate(mapp, 0.2)
             mapp = fhog.PCAFeatureMaps(mapp)
-            self.size_patch = [int(i) for i in [mapp['sizeY'], mapp['sizeX'], mapp['numFeatures']] ] #map(int, [mapp['sizeY'], mapp['sizeX'], mapp['numFeatures']])
+            self.size_patch = [int(i) for i in [mapp['sizeY'], mapp['sizeX'], mapp['numFeatures']] ]
             FeaturesMap = mapp['map'].reshape((self.size_patch[0]*self.size_patch[1], self.size_patch[2])).T   # (size_patch[2], size_patch[0]*size_patch[1])
         else:
             if(z.ndim==3 and z.shape[2]==3):
@@ -264,7 +265,7 @@ class KCFTracker:
 
 
     def init(self, roi, image):
-        self._roi = [float(i) for i in roi] #map(float, roi)
+        self._roi = [ float(i) for i in roi ]#map(float, roi)
         assert(roi[2]>0 and roi[3]>0)
         self._tmpl = self.getFeatures(image, 1)
         self._prob = self.createGaussianPeak(self.size_patch[0], self.size_patch[1])
@@ -279,7 +280,7 @@ class KCFTracker:
 
         cx = self._roi[0] + self._roi[2]/2.
         cy = self._roi[1] + self._roi[3]/2.
-        #import pdb;pdb.set_trace()
+
         loc, peak_value = self.detect(self._tmpl, self.getFeatures(image, 0, 1.0))
 
         if(self.scale_step != 1):
@@ -313,4 +314,4 @@ class KCFTracker:
         x = self.getFeatures(image, 0, 1.0)
         self.train(x, self.interp_factor)
 
-        return self._roi,peak_value
+        return self._roi, peak_value 
