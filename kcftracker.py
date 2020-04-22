@@ -89,8 +89,8 @@ def subwindow(img, window, borderType=cv2.BORDER_CONSTANT): #window : left top w
         new_shape = (new_height,new_width) if len(res.shape)==2 else (new_height,new_width,res.shape[2])
         bg_black = np.zeros(new_shape,dtype=np.uint8)
         bg_black[border[1]:border[1]+res.shape[0], border[0]:border[0]+res.shape[1] ] = res #speed up 50%
-    #return res
-    return bg_black
+        res = bg_black
+    return res
 
 
 
