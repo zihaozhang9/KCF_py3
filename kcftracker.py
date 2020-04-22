@@ -75,7 +75,7 @@ def getBorder(original, limited):
     assert(np.all(np.array(res) >= 0))
     return res
 
-def subwindow(img, window, borderType=cv2.BORDER_CONSTANT):
+def subwindow(img, window, borderType=cv2.BORDER_CONSTANT): #window : left top width height 
     cutWindow = [x for x in window]
     limit(cutWindow, [0,0,img.shape[1],img.shape[0]])   # modify cutWindow
     assert(cutWindow[2]>0 and cutWindow[3]>0)
@@ -83,8 +83,14 @@ def subwindow(img, window, borderType=cv2.BORDER_CONSTANT):
     res = img[cutWindow[1]:cutWindow[1]+cutWindow[3], cutWindow[0]:cutWindow[0]+cutWindow[2]]
 
     if(border != [0,0,0,0]):
-        res = cv2.copyMakeBorder(res, border[1], border[3], border[0], border[2], borderType)
-    return res
+        #res = cv2.copyMakeBorder(res, border[1], border[3], border[0], border[2], borderType) #int top, int bottom, int left, int right,
+        new_width = border[0]+border[2]+res.shape[1]
+        new_height = border[1]+border[3]+res.shape[0]
+        new_shape = (new_height,new_width) if len(res.shape)==2 else (new_height,new_width,res.shape[2])
+        bg_black = np.zeros(new_shape,dtype=np.uint8)
+        bg_black[border[1]:border[1]+res.shape[0], border[0]:border[0]+res.shape[1] ] = res #speed up 50%
+    #return res
+    return bg_black
 
 
 
